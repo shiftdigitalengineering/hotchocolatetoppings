@@ -1,2 +1,2 @@
-# hotchocolatetoppings
+# hotchocolate-toppings
 HotChocolate GraphQL Plugins
