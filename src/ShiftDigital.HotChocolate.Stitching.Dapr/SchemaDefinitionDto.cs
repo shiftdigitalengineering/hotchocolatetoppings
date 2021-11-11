@@ -12,18 +12,32 @@ namespace Harmony.Data.Graphql.Stitching.Dapr
         public List<string> ExtensionDocuments { get; set; } = new List<string>();
     }
 
-    public class SchemaNameDto : IEqualityComparer<SchemaNameDto>
+    public class SchemaNameDto
     {
         public string Name { get; set; }
 
-        public bool Equals(SchemaNameDto x, SchemaNameDto y)
+        public override bool Equals(object obj)
         {
-            return x.Name.Equals(y.Name, System.StringComparison.OrdinalIgnoreCase);
+            return this.Name.Equals(((SchemaNameDto)obj).Name, System.StringComparison.OrdinalIgnoreCase);
         }
 
-        public int GetHashCode([DisallowNull] SchemaNameDto obj)
+        public override int GetHashCode()
         {
-            return obj.Name.GetHashCode();
+            int code = 0;
+            if (!string.IsNullOrWhiteSpace(this.Name))
+            {                
+                foreach (char c in this.Name)
+                {
+                    code += System.Convert.ToInt32(c);
+                }
+            }
+            return code;
+        }
+
+        public override string ToString()
+        {
+            return this.Name;
+
         }
     }
 }
