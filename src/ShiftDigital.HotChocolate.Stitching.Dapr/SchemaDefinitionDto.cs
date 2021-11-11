@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Harmony.Data.Graphql.Stitching.Dapr
 {
@@ -11,8 +12,18 @@ namespace Harmony.Data.Graphql.Stitching.Dapr
         public List<string> ExtensionDocuments { get; set; } = new List<string>();
     }
 
-    public class SchemaNameDto
+    public class SchemaNameDto : IEqualityComparer<SchemaNameDto>
     {
         public string Name { get; set; }
+
+        public bool Equals(SchemaNameDto x, SchemaNameDto y)
+        {
+            return x.Name.Equals(y.Name, System.StringComparison.OrdinalIgnoreCase);
+        }
+
+        public int GetHashCode([DisallowNull] SchemaNameDto obj)
+        {
+            return obj.Name.GetHashCode();
+        }
     }
 }

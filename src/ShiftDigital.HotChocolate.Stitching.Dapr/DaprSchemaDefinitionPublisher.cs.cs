@@ -36,15 +36,18 @@ namespace Harmony.Data.Graphql.Stitching.Dapr
             string key = $"{_topicName}.{schemaDefinition.Name}";
             string json = SerializeSchemaDefinition(schemaDefinition);            
 
-            if(await _daprClient.TrySaveSetStateAsync<SchemaNameDto>(_statestoreDaprComponentName.Value, _topicName.Value, (list) =>
+            if(await _daprClient.TrySaveSetStateAsync<SchemaNameDto>(_statestoreDaprComponentName.Value, _topicName.Value, (HashSet<SchemaNameDto> set) =>
             {
-                if (list == null)
+                if (set == null)
                 {
-                    list = new List<SchemaNameDto>();
+                    set = new HashSet<SchemaNameDto>();
                 }
-
-                list.Add(new SchemaNameDto() { Name = schemaDefinition.Name, });
-                return Task.FromResult(list);
+                var newItm = new SchemaNameDto() { Name = schemaDefinition.Name, };
+                if (set.Count == 0 || !set.Contains(newItm))
+                {
+                    set.Add(newItm);
+                }
+                return Task.FromResult(set);
             }, retryAttempts: 1, cancellationToken: cancellationToken).ConfigureAwait(false))
             {
                 await _daprClient.SaveStateAsync<string>(_statestoreDaprComponentName.Value, key, json).ConfigureAwait(false);
