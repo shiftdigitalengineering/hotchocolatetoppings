@@ -20,17 +20,19 @@ namespace Harmony.Data.Graphql.Stitching.Dapr
         private readonly NameString _statestoreDaprComponentName;
         private readonly List<OnChangeListener> _listeners = new List<OnChangeListener>();
         private readonly DaprClient _daprClient;
+        private readonly Action<string> _onSchemaPublished;
 
         public DaprExecutorOptionsProvider(
             NameString schemaName,
             NameString statestoreDaprComponentName,
             NameString topicName,
-            DaprClient daprClient)
+            Action<string> OnSchemaPublished)
         {
             _statestoreDaprComponentName = statestoreDaprComponentName;
             _schemaName = schemaName;
             _topicName = topicName;
-            _daprClient = daprClient;
+            _daprClient = new DaprClientBuilder().Build();
+            _onSchemaPublished = OnSchemaPublished;
         }
 
         public async ValueTask<IEnumerable<IConfigureRequestExecutorSetup>> GetOptionsAsync(
@@ -49,6 +51,8 @@ namespace Harmony.Data.Graphql.Stitching.Dapr
                     factoryOptions,
                     cancellationToken)
                     .ConfigureAwait(false);
+
+                _onSchemaPublished(schemaDefinition.Name.Value);
             }
 
             return factoryOptions;
@@ -79,6 +83,8 @@ namespace Harmony.Data.Graphql.Stitching.Dapr
                     }
                 }
             }
+
+            _onSchemaPublished(schemaName);
         }
 
         private async ValueTask<IEnumerable<RemoteSchemaDefinition>> GetSchemaDefinitionsAsync(
