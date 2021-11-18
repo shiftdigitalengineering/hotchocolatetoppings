@@ -20,8 +20,18 @@ namespace Microsoft.Extensions.DependencyInjection
         {
             topicName.EnsureNotEmpty(nameof(topicName));
             topicName.EnsureNotEmpty(nameof(statestoreDaprComponentName));
-
+            
+            if (callbackForHttpClientOnSchemaPublished != null)
+            {
+                builder.Services.AddHttpClient();
+            }
+            
             builder.Services.AddSingleton<DownstreamGraphHttpClientFactoryOptionsConfigBySchemaNameCollection>();
+
+            if (callbackForHttpClientOnSchemaPublished != null)
+            {
+                builder.Services.ConfigureOptions<DownstreamGraphHttpClientFactoryOptions>();
+            }
 
             builder.Services.AddSingleton<IRequestExecutorOptionsProvider>(sp =>
             {
