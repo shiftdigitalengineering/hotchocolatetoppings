@@ -10,6 +10,7 @@ using HotChocolate.Language;
 using HotChocolate.Stitching;
 using HotChocolate;
 using Dapr.Client;
+using System.Collections.Concurrent;
 
 namespace Harmony.Data.Graphql.Stitching.Dapr
 {
@@ -20,14 +21,18 @@ namespace Harmony.Data.Graphql.Stitching.Dapr
         private readonly NameString _statestoreDaprComponentName;
         private readonly List<OnChangeListener> _listeners = new List<OnChangeListener>();
         private readonly DaprClient _daprClient;
-        private readonly Action<string> _onSchemaPublished;
+        private readonly Action<IServiceProvider, string> _onSchemaPublished;
+        private readonly IServiceProvider _serviceProvider;
+        private ConcurrentDictionary<string, bool> _httpClientNamesCache = new ConcurrentDictionary<string, bool>();        
 
         public DaprExecutorOptionsProvider(
+            IServiceProvider serviceProvider,
             NameString schemaName,
             NameString statestoreDaprComponentName,
             NameString topicName,
-            Action<string> OnSchemaPublished)
+            Action<IServiceProvider, string> OnSchemaPublished)
         {
+            _serviceProvider = serviceProvider;
             _statestoreDaprComponentName = statestoreDaprComponentName;
             _schemaName = schemaName;
             _topicName = topicName;
@@ -52,7 +57,13 @@ namespace Harmony.Data.Graphql.Stitching.Dapr
                     cancellationToken)
                     .ConfigureAwait(false);
 
-                _onSchemaPublished(schemaDefinition.Name.Value);
+                if (!_httpClientNamesCache.ContainsKey(schemaDefinition.Name.Value))
+                {
+                    if (_httpClientNamesCache.TryAdd(schemaDefinition.Name.Value, true))
+                    {
+                        _onSchemaPublished(_serviceProvider, schemaDefinition.Name.Value);
+                    }
+                }
             }
 
             return factoryOptions;
@@ -73,7 +84,10 @@ namespace Harmony.Data.Graphql.Stitching.Dapr
             await CreateFactoryOptionsAsync(schemaDefinition, factoryOptions, default)
                 .ConfigureAwait(false);
 
-            lock (_listeners)
+            bool _lockTaken = false;
+            Monitor.Enter(_listeners, ref _lockTaken);
+
+            try
             {
                 foreach (OnChangeListener listener in _listeners)
                 {
@@ -83,8 +97,21 @@ namespace Harmony.Data.Graphql.Stitching.Dapr
                     }
                 }
             }
+            finally
+            {
+                if (_lockTaken)
+                {
+                    Monitor.Exit(_listeners);
+                }
+            }
 
-            _onSchemaPublished(schemaName);
+            if (!_httpClientNamesCache.ContainsKey(schemaName))
+            {
+                if (_httpClientNamesCache.TryAdd(schemaName, true))
+                {
+                    _onSchemaPublished(_serviceProvider, schemaName);
+                }
+            }
         }
 
         private async ValueTask<IEnumerable<RemoteSchemaDefinition>> GetSchemaDefinitionsAsync(
@@ -105,7 +132,7 @@ namespace Harmony.Data.Graphql.Stitching.Dapr
             }
 
             return schemaDefinitions;
-        }       
+        }
 
         private async Task<RemoteSchemaDefinition> GetRemoteSchemaDefinitionAsync(string schemaName, CancellationToken cancellationToken)
         {
@@ -161,9 +188,18 @@ namespace Harmony.Data.Graphql.Stitching.Dapr
                 _listeners = listeners;
                 _onChange = onChange;
 
-                lock (_listeners)
+                bool _lockTaken = false;
+                Monitor.Enter(_listeners, ref _lockTaken);
+                try
                 {
                     _listeners.Add(this);
+                }
+                finally
+                {
+                    if (_lockTaken)
+                    {
+                        Monitor.Exit(_listeners);
+                    }
                 }
             }
 
@@ -172,9 +208,18 @@ namespace Harmony.Data.Graphql.Stitching.Dapr
 
             public void Dispose()
             {
-                lock (_listeners)
+                bool _lockTaken = false;
+                Monitor.Enter(_listeners, ref _lockTaken);
+                try 
                 {
                     _listeners.Remove(this);
+                }
+                finally
+                {
+                    if (_lockTaken)
+                    {
+                        Monitor.Exit(_listeners);
+                    }
                 }
             }
         }

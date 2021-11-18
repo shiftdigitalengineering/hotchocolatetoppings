@@ -14,14 +14,14 @@ namespace Microsoft.Extensions.DependencyInjection
             this IRequestExecutorBuilder builder,
             NameString statestoreDaprComponentName,
             NameString topicName,
-            Action<string> OnSchemaPublished)
+            Action<IServiceProvider, string> OnSchemaPublished)
         {
             topicName.EnsureNotEmpty(nameof(topicName));
             topicName.EnsureNotEmpty(nameof(statestoreDaprComponentName));            
 
             builder.Services.AddSingleton<IRequestExecutorOptionsProvider>(sp =>
             {               
-                return new DaprExecutorOptionsProvider(builder.Name, statestoreDaprComponentName, topicName, OnSchemaPublished);
+                return new DaprExecutorOptionsProvider(sp, builder.Name, statestoreDaprComponentName, topicName, OnSchemaPublished);
             });
 
             builder.Services.AddSingleton<IDaprSubscriptionMessageHandler>(x => (DaprExecutorOptionsProvider)x.GetService<IRequestExecutorOptionsProvider>());
