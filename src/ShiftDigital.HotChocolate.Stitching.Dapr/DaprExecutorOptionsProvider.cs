@@ -10,7 +10,9 @@ using HotChocolate.Language;
 using HotChocolate.Stitching;
 using HotChocolate;
 using Dapr.Client;
-using System.Collections.Concurrent;
+using System.Net.Http;
+using ShiftDigital.HotChocolate.Stitching.Dapr.Http;
+using Microsoft.Extensions.Logging;
 
 namespace Harmony.Data.Graphql.Stitching.Dapr
 {
@@ -21,25 +23,61 @@ namespace Harmony.Data.Graphql.Stitching.Dapr
         private readonly NameString _statestoreDaprComponentName;
         private readonly List<OnChangeListener> _listeners = new List<OnChangeListener>();
         private readonly DaprClient _daprClient;
-        private readonly Action<IServiceProvider, string> _onSchemaPublished;
+        private readonly Action<IServiceProvider, string> _callbackForNameOnSchemaPublished;
+        private readonly Action<IServiceProvider, string, HttpClient> _callbackForHttpClientOnSchemaPublished;
         private readonly IServiceProvider _serviceProvider;
-        private ConcurrentDictionary<string, bool> _httpClientNamesCache = new ConcurrentDictionary<string, bool>();        
+        private readonly DownstreamGraphHttpClientFactoryOptionsConfigBySchemaNameCollection _publishedSchemaTrackingCollection;
+
+        private DaprExecutorOptionsProvider(
+            IServiceProvider serviceProvider,
+            NameString schemaName,
+            NameString statestoreDaprComponentName,
+            NameString topicName)
+        {
+            _serviceProvider = serviceProvider;
+            _publishedSchemaTrackingCollection = _serviceProvider.GetService<DownstreamGraphHttpClientFactoryOptionsConfigBySchemaNameCollection>();
+            _statestoreDaprComponentName = statestoreDaprComponentName;
+            _schemaName = schemaName;
+            _topicName = topicName;
+            _daprClient = new DaprClientBuilder().Build();
+        }
 
         public DaprExecutorOptionsProvider(
             IServiceProvider serviceProvider,
             NameString schemaName,
             NameString statestoreDaprComponentName,
             NameString topicName,
-            Action<IServiceProvider, string> OnSchemaPublished)
+            Action<IServiceProvider, string> callbackForNameOnSchemaPublished)
+        : this(serviceProvider, schemaName, statestoreDaprComponentName, topicName, callbackForNameOnSchemaPublished, null)
         {
-            _serviceProvider = serviceProvider;
-            _statestoreDaprComponentName = statestoreDaprComponentName;
-            _schemaName = schemaName;
-            _topicName = topicName;
-            _daprClient = new DaprClientBuilder().Build();
-            _onSchemaPublished = OnSchemaPublished;
         }
 
+        public DaprExecutorOptionsProvider(
+           IServiceProvider serviceProvider,
+           NameString schemaName,
+           NameString statestoreDaprComponentName,
+           NameString topicName,
+           Action<IServiceProvider, string, HttpClient> callbackForHttpClientOnSchemaPublished)
+        : this(serviceProvider, schemaName, statestoreDaprComponentName, topicName, null, callbackForHttpClientOnSchemaPublished)
+        {
+        }
+
+        public DaprExecutorOptionsProvider(
+           IServiceProvider serviceProvider,
+           NameString schemaName,
+           NameString statestoreDaprComponentName,
+           NameString topicName,
+           Action<IServiceProvider, string> callbackForNameOnSchemaPublished,
+           Action<IServiceProvider, string, HttpClient> callbackForHttpClientOnSchemaPublished)
+        : this(serviceProvider, schemaName, statestoreDaprComponentName, topicName)
+        {
+            if (callbackForHttpClientOnSchemaPublished != null)
+                _callbackForHttpClientOnSchemaPublished = callbackForHttpClientOnSchemaPublished;
+
+            if(callbackForNameOnSchemaPublished != null)
+                _callbackForNameOnSchemaPublished = callbackForNameOnSchemaPublished;
+        }
+        
         public async ValueTask<IEnumerable<IConfigureRequestExecutorSetup>> GetOptionsAsync(
             CancellationToken cancellationToken)
         {
@@ -57,13 +95,7 @@ namespace Harmony.Data.Graphql.Stitching.Dapr
                     cancellationToken)
                     .ConfigureAwait(false);
 
-                if (!_httpClientNamesCache.ContainsKey(schemaDefinition.Name.Value))
-                {
-                    if (_httpClientNamesCache.TryAdd(schemaDefinition.Name.Value, true))
-                    {
-                        _onSchemaPublished(_serviceProvider, schemaDefinition.Name.Value);
-                    }
-                }
+                HandlePublishedSchemaMessages(schemaDefinition.Name.Value);
             }
 
             return factoryOptions;
@@ -105,11 +137,36 @@ namespace Harmony.Data.Graphql.Stitching.Dapr
                 }
             }
 
-            if (!_httpClientNamesCache.ContainsKey(schemaName))
+            HandlePublishedSchemaMessages(schemaName);
+        }
+
+        private void HandlePublishedSchemaMessages(string schemaName)
+        {
+            if (!_publishedSchemaTrackingCollection.Exists(schemaName))
             {
-                if (_httpClientNamesCache.TryAdd(schemaName, true))
+                if (_callbackForNameOnSchemaPublished == null && _callbackForHttpClientOnSchemaPublished == null)
                 {
-                    _onSchemaPublished(_serviceProvider, schemaName);
+                    var logger = _serviceProvider.GetService<ILogger<DaprExecutorOptionsProvider>>();
+                    logger.LogWarning($"No callback found for the published schema name: '{schemaName}'.");
+                    return;
+                }
+
+                bool _publishedSchemaTrackingCollectionAdded = false;
+                if (_callbackForHttpClientOnSchemaPublished != null)
+                {
+                    _publishedSchemaTrackingCollection.TryAdd(schemaName,
+                        httpClient => _callbackForHttpClientOnSchemaPublished(_serviceProvider, schemaName, httpClient));
+
+                    _publishedSchemaTrackingCollectionAdded = true;
+
+                }
+                if (_callbackForNameOnSchemaPublished != null)
+                {
+                    if (!_publishedSchemaTrackingCollectionAdded)
+                    {
+                        _publishedSchemaTrackingCollection.TryAdd(schemaName, null);
+                    }
+                    _callbackForNameOnSchemaPublished(_serviceProvider, schemaName);
                 }
             }
         }
@@ -210,7 +267,7 @@ namespace Harmony.Data.Graphql.Stitching.Dapr
             {
                 bool _lockTaken = false;
                 Monitor.Enter(_listeners, ref _lockTaken);
-                try 
+                try
                 {
                     _listeners.Remove(this);
                 }

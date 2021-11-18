@@ -4,7 +4,8 @@ using HotChocolate;
 using HotChocolate.Execution.Configuration;
 using HotChocolate.Stitching.Requests;
 using Harmony.Data.Graphql.Stitching.Dapr;
-using Dapr.Client;
+using System.Net.Http;
+using ShiftDigital.HotChocolate.Stitching.Dapr.Http;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -14,14 +15,17 @@ namespace Microsoft.Extensions.DependencyInjection
             this IRequestExecutorBuilder builder,
             NameString statestoreDaprComponentName,
             NameString topicName,
-            Action<IServiceProvider, string> OnSchemaPublished)
+            Action<IServiceProvider, string> callbackForNameOnSchemaPublished,
+            Action<IServiceProvider, string, HttpClient> callbackForHttpClientOnSchemaPublished)
         {
             topicName.EnsureNotEmpty(nameof(topicName));
-            topicName.EnsureNotEmpty(nameof(statestoreDaprComponentName));            
+            topicName.EnsureNotEmpty(nameof(statestoreDaprComponentName));
+
+            builder.Services.AddSingleton<DownstreamGraphHttpClientFactoryOptionsConfigBySchemaNameCollection>();
 
             builder.Services.AddSingleton<IRequestExecutorOptionsProvider>(sp =>
-            {               
-                return new DaprExecutorOptionsProvider(sp, builder.Name, statestoreDaprComponentName, topicName, OnSchemaPublished);
+            {
+                return new DaprExecutorOptionsProvider(sp, builder.Name, statestoreDaprComponentName, topicName, callbackForNameOnSchemaPublished, callbackForHttpClientOnSchemaPublished);
             });
 
             builder.Services.AddSingleton<IDaprSubscriptionMessageHandler>(x => (DaprExecutorOptionsProvider)x.GetService<IRequestExecutorOptionsProvider>());
@@ -32,6 +36,24 @@ namespace Microsoft.Extensions.DependencyInjection
             builder.Services.TryAddScoped<IStitchingContext, StitchingContext>();
 
             return builder;
+        }
+
+        public static IRequestExecutorBuilder AddRemoteSchemasFromDapr(
+            this IRequestExecutorBuilder builder,
+            NameString statestoreDaprComponentName,
+            NameString topicName,
+            Action<IServiceProvider, string> callbackForNameOnSchemaPublished)
+        {
+            return builder.AddRemoteSchemasFromDapr(statestoreDaprComponentName, topicName, callbackForNameOnSchemaPublished, null);
+        }
+
+        public static IRequestExecutorBuilder AddRemoteSchemasFromDapr(
+           this IRequestExecutorBuilder builder,
+           NameString statestoreDaprComponentName,
+           NameString topicName,
+           Action<IServiceProvider, string, HttpClient> callbackForHttpClientOnSchemaPublished)
+        {
+            return builder.AddRemoteSchemasFromDapr(statestoreDaprComponentName, topicName, null, callbackForHttpClientOnSchemaPublished);
         }
     }
 }
