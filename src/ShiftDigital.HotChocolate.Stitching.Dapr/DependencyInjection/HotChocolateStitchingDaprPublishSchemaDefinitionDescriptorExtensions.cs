@@ -3,6 +3,7 @@ using HotChocolate;
 using HotChocolate.Stitching.SchemaDefinitions;
 using Harmony.Data.Graphql.Stitching.Dapr;
 using Dapr.Client;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -13,7 +14,8 @@ namespace Microsoft.Extensions.DependencyInjection
             NameString statestoreDaprComponentName,
             NameString pubsubDaprComponentName,
             NameString topicName,
-            Func<IServiceProvider, DaprClient> daprCreator)
+            Func<IServiceProvider, DaprClient> daprCreator,
+            ILoggerFactory logFactory = null)
         {
             if (daprCreator is null)
             {
@@ -26,7 +28,8 @@ namespace Microsoft.Extensions.DependencyInjection
             return descriptor.SetSchemaDefinitionPublisher(sp =>
             {
                 var daprClient = daprCreator(sp);
-                return new DaprSchemaDefinitionPublisher(statestoreDaprComponentName, pubsubDaprComponentName, topicName, daprClient);
+
+                return new DaprSchemaDefinitionPublisher(statestoreDaprComponentName, pubsubDaprComponentName, topicName, daprClient, logFactory);
             });
         }
     }
