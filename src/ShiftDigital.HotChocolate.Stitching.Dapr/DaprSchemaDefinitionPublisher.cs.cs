@@ -53,7 +53,7 @@ namespace Harmony.Data.Graphql.Stitching.Dapr
 
             bool notAnException = false;
 
-            if (await _daprClient.TrySaveSetStateAsync<SchemaNameDto>(_statestoreDaprComponentName.Value, _topicName.Value, (HashSet<SchemaNameDto> set) =>
+            if (await _daprClient.TrySaveSetStateAsync<SchemaNameDto>(_statestoreDaprComponentName.Value, _topicName.Value, async (HashSet<SchemaNameDto> set) =>
              {
                  if (set == null)
                  {
@@ -75,6 +75,21 @@ namespace Harmony.Data.Graphql.Stitching.Dapr
                  }
                  else
                  {
+                     if (set.Contains(newItm))
+                     {
+                         if (_logger != null)
+                         {
+                             _logger.LogInformation("Inside Publish for : " + schemaDefinition.Name + ", save Schema. Schema JSON save.");
+                         }
+                         await _daprClient.SaveStateAsync<string>(_statestoreDaprComponentName.Value, key, json).ConfigureAwait(false);
+
+                         if (_logger != null)
+                         {
+                             _logger.LogInformation("Inside Publish for : " + schemaDefinition.Name + ", save Schema. publish event.");
+                         }
+                         await _daprClient.PublishEventAsync(_pubsubDaprComponentName.Value, _topicName.Value, schemaDefinition.Name.Value, cancellationToken: cancellationToken).ConfigureAwait(false);
+                     }
+
                      set = null;
                      notAnException = true;
                      if (_logger != null)
@@ -83,7 +98,7 @@ namespace Harmony.Data.Graphql.Stitching.Dapr
                      }
                  }
 
-                 return Task.FromResult(set);
+                 return set;
              }, retryAttempts: 1, cancellationToken: cancellationToken, logger: _defaultLogger).ConfigureAwait(false))
             {
                 if (_logger != null)
