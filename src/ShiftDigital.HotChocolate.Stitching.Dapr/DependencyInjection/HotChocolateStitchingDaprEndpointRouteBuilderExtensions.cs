@@ -11,9 +11,9 @@ namespace Microsoft.Extensions.DependencyInjection
 {
     public static class HotChocolateStitchingDaprEndpointRouteBuilderExtensions
     {
-        public static void MapGraphQLDapr(this IEndpointRouteBuilder endpointRouteBuilder, IApplicationBuilder app, NameString daprPubSubComponentName, NameString topicName)
+        public static void MapGraphQLDapr(this IEndpointRouteBuilder endpointRouteBuilder, IApplicationBuilder app, string daprPubSubComponentName, string topicName)
         {            
-            endpointRouteBuilder.MapPost(string.Concat("/",topicName.Value), async context =>
+            endpointRouteBuilder.MapPost(string.Concat("/",topicName), async context =>
             {
                 var message = "";
                 var req = context.Request;

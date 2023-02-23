@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net7.0</TargetFramework>
 	<PackageId>HotChocolateToppings</PackageId>
 	<PackageReadmeFile>README.md</PackageReadmeFile>
 	<PackageProjectUrl>https://github.com/shiftdigitalengineering/hotchocolatetoppings</PackageProjectUrl>
@@ -13,11 +13,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dapr.AspNetCore" Version="1.8.0" />
-    <PackageReference Include="HotChocolate.Stitching" Version="12.13.2" />
-    <PackageReference Include="HotChocolate.Stitching.Abstractions" Version="12.13.2" />    
+    <PackageReference Include="Dapr.AspNetCore" Version="1.10.0" />
+    <PackageReference Include="HotChocolate.Stitching" Version="13.0.4" />
+    <PackageReference Include="HotChocolate.Stitching.Abstractions" Version="13.0.4" />    
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.2.5" />    
-    <PackageReference Include="OptimisticDapr" Version="1.0.13" />
+    <PackageReference Include="OptimisticDapr" Version="1.0.15" />
 	<None Include="..\..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 

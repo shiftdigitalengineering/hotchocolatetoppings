@@ -11,9 +11,9 @@ namespace Microsoft.Extensions.DependencyInjection
     {
         public static IPublishSchemaDefinitionDescriptor PublishToDapr(
             this IPublishSchemaDefinitionDescriptor descriptor,
-            NameString statestoreDaprComponentName,
-            NameString pubsubDaprComponentName,
-            NameString topicName,
+            string statestoreDaprComponentName,
+            string pubsubDaprComponentName,
+            string topicName,
             Func<IServiceProvider, DaprClient> daprCreator,
             ILoggerFactory logFactory = null)
         {
@@ -21,9 +21,12 @@ namespace Microsoft.Extensions.DependencyInjection
             {
                 throw new ArgumentNullException(nameof(daprCreator));
             }
-
-            pubsubDaprComponentName.EnsureNotEmpty(nameof(pubsubDaprComponentName));
-            topicName.EnsureNotEmpty(nameof(topicName));
+            
+            if (string.IsNullOrWhiteSpace(pubsubDaprComponentName))
+                throw new ArgumentNullException(nameof(pubsubDaprComponentName));
+            
+            if (string.IsNullOrWhiteSpace(topicName))
+                throw new ArgumentNullException(nameof(topicName));
 
             return descriptor.SetSchemaDefinitionPublisher(sp =>
             {
