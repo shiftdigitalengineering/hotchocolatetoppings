@@ -18,9 +18,9 @@ namespace Harmony.Data.Graphql.Stitching.Dapr
 {
     internal class DaprExecutorOptionsProvider : IRequestExecutorOptionsProvider, IDaprSubscriptionMessageHandler
     {
-        private readonly NameString _schemaName;
-        private readonly NameString _topicName;
-        private readonly NameString _statestoreDaprComponentName;
+        private readonly string _schemaName;
+        private readonly string _topicName;
+        private readonly string _statestoreDaprComponentName;
         private readonly List<OnChangeListener> _listeners = new List<OnChangeListener>();
         private readonly DaprClient _daprClient;
         private readonly Action<IServiceProvider, string> _callbackForNameOnSchemaPublished;
@@ -30,9 +30,9 @@ namespace Harmony.Data.Graphql.Stitching.Dapr
 
         private DaprExecutorOptionsProvider(
             IServiceProvider serviceProvider,
-            NameString schemaName,
-            NameString statestoreDaprComponentName,
-            NameString topicName)
+            string schemaName,
+            string statestoreDaprComponentName,
+            string topicName)
         {
             _serviceProvider = serviceProvider;
             _publishedSchemaTrackingCollection = _serviceProvider.GetService<DownstreamGraphHttpClientFactoryOptionsConfigBySchemaNameCollection>();
@@ -44,9 +44,9 @@ namespace Harmony.Data.Graphql.Stitching.Dapr
 
         public DaprExecutorOptionsProvider(
             IServiceProvider serviceProvider,
-            NameString schemaName,
-            NameString statestoreDaprComponentName,
-            NameString topicName,
+            string schemaName,
+            string statestoreDaprComponentName,
+            string topicName,
             Action<IServiceProvider, string> callbackForNameOnSchemaPublished)
         : this(serviceProvider, schemaName, statestoreDaprComponentName, topicName, callbackForNameOnSchemaPublished, null)
         {
@@ -54,9 +54,9 @@ namespace Harmony.Data.Graphql.Stitching.Dapr
 
         public DaprExecutorOptionsProvider(
            IServiceProvider serviceProvider,
-           NameString schemaName,
-           NameString statestoreDaprComponentName,
-           NameString topicName,
+           string schemaName,
+           string statestoreDaprComponentName,
+           string topicName,
            Action<IServiceProvider, string, HttpClient> callbackForHttpClientOnSchemaPublished)
         : this(serviceProvider, schemaName, statestoreDaprComponentName, topicName, null, callbackForHttpClientOnSchemaPublished)
         {
@@ -64,9 +64,9 @@ namespace Harmony.Data.Graphql.Stitching.Dapr
 
         public DaprExecutorOptionsProvider(
            IServiceProvider serviceProvider,
-           NameString schemaName,
-           NameString statestoreDaprComponentName,
-           NameString topicName,
+           string schemaName,
+           string statestoreDaprComponentName,
+           string topicName,
            Action<IServiceProvider, string> callbackForNameOnSchemaPublished,
            Action<IServiceProvider, string, HttpClient> callbackForHttpClientOnSchemaPublished)
         : this(serviceProvider, schemaName, statestoreDaprComponentName, topicName)
@@ -95,7 +95,7 @@ namespace Harmony.Data.Graphql.Stitching.Dapr
                     cancellationToken)
                     .ConfigureAwait(false);
 
-                HandlePublishedSchemaMessages(schemaDefinition.Name.Value);
+                HandlePublishedSchemaMessages(schemaDefinition.Name);
             }
 
             return factoryOptions;
@@ -174,7 +174,7 @@ namespace Harmony.Data.Graphql.Stitching.Dapr
         private async ValueTask<IEnumerable<RemoteSchemaDefinition>> GetSchemaDefinitionsAsync(
             CancellationToken cancellationToken)
         {
-            var items = await _daprClient.GetStateEntryAsync<List<SchemaNameDto>>(_statestoreDaprComponentName.Value, _topicName.Value, ConsistencyMode.Strong, null, cancellationToken: cancellationToken).ConfigureAwait(false);
+            var items = await _daprClient.GetStateEntryAsync<List<SchemaNameDto>>(_statestoreDaprComponentName, _topicName, ConsistencyMode.Strong, null, cancellationToken: cancellationToken).ConfigureAwait(false);
 
             var schemaDefinitions = new List<RemoteSchemaDefinition>();
 
@@ -194,7 +194,7 @@ namespace Harmony.Data.Graphql.Stitching.Dapr
         private async Task<RemoteSchemaDefinition> GetRemoteSchemaDefinitionAsync(string schemaName, CancellationToken cancellationToken)
         {
             string key = $"{_topicName}.{schemaName}";
-            var json = await _daprClient.GetStateEntryAsync<string>(_statestoreDaprComponentName.Value, key, cancellationToken: cancellationToken).ConfigureAwait(false);
+            var json = await _daprClient.GetStateEntryAsync<string>(_statestoreDaprComponentName, key, cancellationToken: cancellationToken).ConfigureAwait(false);
             SchemaDefinitionDto dto = JsonSerializer.Deserialize<SchemaDefinitionDto>(json.Value);
 
             return new RemoteSchemaDefinition(

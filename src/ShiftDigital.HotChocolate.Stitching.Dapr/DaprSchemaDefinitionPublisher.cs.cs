@@ -16,17 +16,17 @@ namespace Harmony.Data.Graphql.Stitching.Dapr
     public class DaprSchemaDefinitionPublisher : ISchemaDefinitionPublisher
     {
         private DaprClient _daprClient;
-        private readonly NameString _topicName;
-        private readonly NameString _pubsubDaprComponentName;
-        private readonly NameString _statestoreDaprComponentName;
+        private readonly string _topicName;
+        private readonly string _pubsubDaprComponentName;
+        private readonly string _statestoreDaprComponentName;
         private ILogger<DaprSchemaDefinitionPublisher> _logger;
         private ILogger _defaultLogger;
         private ILoggerFactory _loggerFactory = null;
 
         public DaprSchemaDefinitionPublisher(
-            NameString statestoreDaprComponentName,
-            NameString pubsubDaprComponentName,
-            NameString topicName,
+            string statestoreDaprComponentName,
+            string pubsubDaprComponentName,
+            string topicName,
             DaprClient daprClient,
             ILoggerFactory loggerFactory)
         {
@@ -53,7 +53,7 @@ namespace Harmony.Data.Graphql.Stitching.Dapr
 
             bool notAnException = false;
 
-            if (await _daprClient.TrySaveSetStateAsync<SchemaNameDto>(_statestoreDaprComponentName.Value, _topicName.Value, async (HashSet<SchemaNameDto> set) =>
+            if (await _daprClient.TrySaveSetStateAsync<SchemaNameDto>(_statestoreDaprComponentName, _topicName, async (HashSet<SchemaNameDto> set) =>
              {
                  if (set == null)
                  {
@@ -81,13 +81,13 @@ namespace Harmony.Data.Graphql.Stitching.Dapr
                          {
                              _logger.LogInformation("Inside Publish for : " + schemaDefinition.Name + ", save Schema. Schema JSON save.");
                          }
-                         await _daprClient.SaveStateAsync<string>(_statestoreDaprComponentName.Value, key, json).ConfigureAwait(false);
+                         await _daprClient.SaveStateAsync<string>(_statestoreDaprComponentName, key, json).ConfigureAwait(false);
 
                          if (_logger != null)
                          {
                              _logger.LogInformation("Inside Publish for : " + schemaDefinition.Name + ", save Schema. publish event.");
                          }
-                         await _daprClient.PublishEventAsync(_pubsubDaprComponentName.Value, _topicName.Value, schemaDefinition.Name.Value, cancellationToken: cancellationToken).ConfigureAwait(false);
+                         await _daprClient.PublishEventAsync(_pubsubDaprComponentName, _topicName, schemaDefinition.Name, cancellationToken: cancellationToken).ConfigureAwait(false);
                      }
 
                      set = null;
@@ -105,13 +105,13 @@ namespace Harmony.Data.Graphql.Stitching.Dapr
                 {
                     _logger.LogInformation("Inside Publish for : " + schemaDefinition.Name + ", save Schema. Schema JSON save.");
                 }
-                await _daprClient.SaveStateAsync<string>(_statestoreDaprComponentName.Value, key, json).ConfigureAwait(false);
+                await _daprClient.SaveStateAsync<string>(_statestoreDaprComponentName, key, json).ConfigureAwait(false);
 
                 if (_logger != null)
                 {
                     _logger.LogInformation("Inside Publish for : " + schemaDefinition.Name + ", save Schema. publish event.");
                 }
-                await _daprClient.PublishEventAsync(_pubsubDaprComponentName.Value, _topicName.Value, schemaDefinition.Name.Value, cancellationToken: cancellationToken).ConfigureAwait(false);
+                await _daprClient.PublishEventAsync(_pubsubDaprComponentName, _topicName, schemaDefinition.Name, cancellationToken: cancellationToken).ConfigureAwait(false);
             }
             else
             {
@@ -127,7 +127,7 @@ namespace Harmony.Data.Graphql.Stitching.Dapr
         {
             var dto = new SchemaDefinitionDto
             {
-                Name = schemaDefinition.Name.Value,
+                Name = schemaDefinition.Name,
                 Document = schemaDefinition.Document.ToString(false),
             };
 

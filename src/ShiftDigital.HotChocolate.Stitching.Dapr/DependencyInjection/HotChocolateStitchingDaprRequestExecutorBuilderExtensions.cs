@@ -13,14 +13,17 @@ namespace Microsoft.Extensions.DependencyInjection
     {
         public static IRequestExecutorBuilder AddRemoteSchemasFromDapr(
             this IRequestExecutorBuilder builder,
-            NameString statestoreDaprComponentName,
-            NameString topicName,
+            string statestoreDaprComponentName,
+            string topicName,
             Action<IServiceProvider, string> callbackForNameOnSchemaPublished,
             Action<IServiceProvider, string, HttpClient> callbackForHttpClientOnSchemaPublished)
         {
-            topicName.EnsureNotEmpty(nameof(topicName));
-            topicName.EnsureNotEmpty(nameof(statestoreDaprComponentName));
+            if (string.IsNullOrWhiteSpace(topicName))
+                throw new ArgumentNullException(nameof(topicName));
             
+            if (string.IsNullOrWhiteSpace(statestoreDaprComponentName))
+                throw new ArgumentNullException(nameof(statestoreDaprComponentName));
+
             if (callbackForHttpClientOnSchemaPublished != null)
             {
                 builder.Services.AddHttpClient();
@@ -50,8 +53,8 @@ namespace Microsoft.Extensions.DependencyInjection
 
         public static IRequestExecutorBuilder AddRemoteSchemasFromDapr(
             this IRequestExecutorBuilder builder,
-            NameString statestoreDaprComponentName,
-            NameString topicName,
+            string statestoreDaprComponentName,
+            string topicName,
             Action<IServiceProvider, string> callbackForNameOnSchemaPublished)
         {
             return builder.AddRemoteSchemasFromDapr(statestoreDaprComponentName, topicName, callbackForNameOnSchemaPublished, null);
@@ -59,8 +62,8 @@ namespace Microsoft.Extensions.DependencyInjection
 
         public static IRequestExecutorBuilder AddRemoteSchemasFromDapr(
            this IRequestExecutorBuilder builder,
-           NameString statestoreDaprComponentName,
-           NameString topicName,
+           string statestoreDaprComponentName,
+           string topicName,
            Action<IServiceProvider, string, HttpClient> callbackForHttpClientOnSchemaPublished)
         {
             return builder.AddRemoteSchemasFromDapr(statestoreDaprComponentName, topicName, null, callbackForHttpClientOnSchemaPublished);
