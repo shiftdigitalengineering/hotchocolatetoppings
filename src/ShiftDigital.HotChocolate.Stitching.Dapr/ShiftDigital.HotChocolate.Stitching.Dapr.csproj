@@ -13,11 +13,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dapr.AspNetCore" Version="1.10.0" />
-    <PackageReference Include="HotChocolate.Stitching" Version="13.0.5" />
-    <PackageReference Include="HotChocolate.Stitching.Abstractions" Version="13.0.5" />    
+    <PackageReference Include="Dapr.AspNetCore" Version="1.11.0" />
+    <PackageReference Include="HotChocolate.Stitching" Version="13.3.3" />
+    <PackageReference Include="HotChocolate.Stitching.Abstractions" Version="13.3.3" />    
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.2.5" />    
-    <PackageReference Include="OptimisticDapr" Version="1.0.15" />
+    <PackageReference Include="OptimisticDapr" Version="1.0.16" />
 	<None Include="..\..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
